@@ -51,7 +51,7 @@ def tissue_on_grid(tissue_path: str, case):
 def segment(input_path: str, model: str, out_dir: str, mask: str | None = None, bias: str = "auto", hd_bet: bool = False,
             tissue_map: str | None = None, stage1_only: bool = False, csf_rule: bool = True, device: str = "cpu",
             batch: int = 4, threads: int | None = None, weights_dir: str | None = None, download: bool = True,
-            save_prob: bool = False, models=None, classifier=None, log=None) -> dict:
+            save_prob: bool = False, models=None, classifier=None, log=None, threshold: float | None = None) -> dict:
     """The whole chain for one image. ``models`` / ``classifier`` may be passed for tests (no weight files needed)."""
     t0 = time.time()
     times = {}
@@ -83,10 +83,11 @@ def segment(input_path: str, model: str, out_dir: str, mask: str | None = None, 
     log(f"probability map: max {prob.max():.2f}")
 
     tissue = tissue_on_grid(tissue_map, case) if tissue_map else None
-    labels1, rows1, giant1 = components(prob, **STAGE1)
+    stage1 = dict(STAGE1, threshold=threshold if threshold is not None else STAGE1["threshold"])
+    labels1, rows1, giant1 = components(prob, **stage1)
     majority_tissue(labels1, rows1, tissue)
     report = dict(version=__version__, model=model, members=member_files, device=device, input=os.path.abspath(input_path),
-                  preprocessing=case.info, settings=dict(stage1=STAGE1, candidates=CANDIDATES, stage1_only=stage1_only,
+                  preprocessing=case.info, settings=dict(stage1=stage1, candidates=CANDIDATES, stage1_only=stage1_only,
                   csf_rule=bool(tissue is not None and csf_rule), tissue_map=tissue_map),
                   giant_components_dropped=giant1)
     if stage1_only or classifier is None:
@@ -94,7 +95,7 @@ def segment(input_path: str, model: str, out_dir: str, mask: str | None = None, 
             r["accepted"] = not (csf_rule and tissue is not None and r["in_csf"])
             r["rejected_by"] = None if r["accepted"] else "csf rule"
         labels, rows = labels1, rows1
-        report["decision"] = "stage 1: threshold 0.3, 2 mm3 to 2100 voxels" + (", CSF rule" if tissue is not None and csf_rule else "")
+        report["decision"] = f"stage 1: threshold {stage1['threshold']}, 2 mm3 to 2100 voxels" + (", CSF rule" if tissue is not None and csf_rule else "")
     else:
         labels, rows, _ = components(prob, **CANDIDATES)
         majority_tissue(labels, rows, tissue)
@@ -156,6 +157,9 @@ def main(argv=None) -> int:
     ap.add_argument("--tissue-map", help="SynthSeg segmentation of the same scan; enables the CSF rule (stage 1) and the tissue label in the tables")
     ap.add_argument("--stage1-only", action="store_true", help="skip the candidate classifier: threshold 0.3 plus the CSF rule if a tissue map is given")
     ap.add_argument("--no-csf-rule", action="store_true", help="with --tissue-map and --stage1-only: keep components in CSF")
+    ap.add_argument("--threshold", type=float, default=None,
+                    help="stage-1 probability threshold (default 0.3). The released full-data models give higher probabilities than the "
+                         "research fold models: with --stage1-only on another scanner 0.6 scored best (docs/CROSS-TESTS.md); stage 2 does not need this")
     ap.add_argument("--save-prob", action="store_true", help="also write the probability map on the 0.5 x 0.5 x 1 mm grid")
     ap.add_argument("--device", default="cpu", help="cpu (default) or cuda")
     ap.add_argument("--threads", type=int, help="torch CPU threads (default: torch's choice)")
@@ -177,7 +181,7 @@ def main(argv=None) -> int:
     if not a.model or not a.input:
         ap.error("-m/--model and -i/--input are required (or --list-models / --selftest)")
     segment(a.input, a.model, a.out, a.mask, a.bias, a.hd_bet, a.tissue_map, a.stage1_only, not a.no_csf_rule, a.device,
-            a.batch, a.threads, a.weights_dir, not a.no_download, a.save_prob)
+            a.batch, a.threads, a.weights_dir, not a.no_download, a.save_prob, threshold=a.threshold)
     return 0
 
 
