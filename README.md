@@ -59,9 +59,9 @@ Outputs in `-o`: `<stem>_cmb_mask.nii.gz`, `<stem>_lesions.csv` / `.json` (volum
 score, decision, tissue label if a map was given), `<stem>_report.json` (model, members, settings, preprocessing, timings,
 versions), optionally `<stem>_cmb_prob_grid.nii.gz` (`--save-prob`).
 
-Runtime, measured on a VALDO case of 512 x 512 x 35 voxels (0.45 x 0.45 x 4 mm) with 8 CPU threads: 204 s in total, of which
-100 s FSL `fast -B` and 100 s the sliding window (373 windows). `--bias none` or `n4` is faster; `--threads` sets the torch
-threads; `--device cuda` uses a GPU when one is present (a few seconds per volume).
+Runtime, measured on a VALDO case of 512 x 512 x 35 voxels (0.45 x 0.45 x 4 mm) with 8 CPU threads: 345 s in total with the
+two-member ensemble, of which 100 s FSL `fast -B` and about 240 s the sliding window (373 windows x 2 members). `--bias none` or `n4`
+is faster; `--threads` sets the torch threads; `--device cuda` uses a GPU when one is present (a few seconds per volume).
 
 ## Options
 

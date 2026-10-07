@@ -12,7 +12,7 @@
         },
         {
           "file": "valdo_t2_seed1.pt",
-          "sha256": null
+          "sha256": "5a74da0ae50afa49b72bc3247dccea1a4f371bb93e5279f135d01ee160e6a6d8"
         }
       ]
     },
@@ -23,11 +23,11 @@
       "members": [
         {
           "file": "charite_t2_seed42.pt",
-          "sha256": null
+          "sha256": "90cd9c26e89832401974498c5fa19e04231d9333b3eb0832293ca4deb6545713"
         },
         {
           "file": "charite_t2_seed1.pt",
-          "sha256": null
+          "sha256": "ea855ed5f0dd1a165ddf90937b63a945a5ce5786d7799304a259742bb71e35e5"
         }
       ]
     },
@@ -38,11 +38,11 @@
       "members": [
         {
           "file": "charite_swi_seed42.pt",
-          "sha256": null
+          "sha256": "ad6dbf149ffd1ec2a0f61f9057cf32e64ffc30fa19aa4835ea5ca506d5530619"
         },
         {
           "file": "charite_swi_seed1.pt",
-          "sha256": null
+          "sha256": "8750e3bf2499f785af163082170177206568dc7fce7dfa0f8abd19a1aa9c23cf"
         }
       ]
     }
