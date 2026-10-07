@@ -15,3 +15,18 @@ jobs:
       - run: pip install -e ".[test]"
       - run: mb_segment --list-models && mb_segment --selftest
       - run: pytest -q
+  fresh-machine:
+    # Exactly the README on a machine that knows nothing: install from GitHub, weights from the release, segment a phantom.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install torch --index-url https://download.pytorch.org/whl/cpu
+      - run: pip install "git+https://github.com/${{ github.repository }}.git@${{ github.sha }}"
+      - run: mb_segment --list-models
+      - run: |
+          python -c "from mb_segment.synthetic import phantom; import nibabel as nib; img,_,_=phantom(); nib.save(img,'phantom.nii.gz')"
+          mb_segment -m valdo_t2 -i phantom.nii.gz -o out --threads 2
+          ls -la out ~/.cache/mb_segment
+          python -c "import json; r=json.load(open('out/phantom_report.json')); print(r['members'], r['decision'], r['timings'])"
