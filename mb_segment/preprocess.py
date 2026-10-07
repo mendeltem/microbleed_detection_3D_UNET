@@ -69,6 +69,17 @@ def _run(cmd, cwd=None):
     return proc.stdout
 
 
+def _fsl_fast() -> Optional[str]:
+    """FSL's ``fast``: on the PATH, or below $FSLDIR, or in the usual home install."""
+    exe = shutil.which("fast")
+    if exe:
+        return exe
+    for root in (os.environ.get("FSLDIR"), os.path.expanduser("~/fsl"), "/usr/local/fsl"):
+        if root and os.path.exists(os.path.join(root, "bin", "fast")):
+            return os.path.join(root, "bin", "fast")
+    return None
+
+
 def brain_mask(canonical: nib.Nifti1Image, image: np.ndarray, mask_path: Optional[str] = None,
                hd_bet: bool = False, workdir: Optional[str] = None) -> tuple[np.ndarray, str]:
     """Returns ``(mask on the canonical grid, how it was obtained)``."""
@@ -101,7 +112,7 @@ def bias_correct(canonical: nib.Nifti1Image, image: np.ndarray, mask: np.ndarray
                  workdir: Optional[str] = None) -> tuple[np.ndarray, str]:
     """``method``: auto | fsl | n4 | none. Returns ``(corrected image, method used)``."""
     if method == "auto":
-        if shutil.which("fast"):
+        if _fsl_fast():
             method = "fsl"
         else:
             try:
@@ -113,9 +124,9 @@ def bias_correct(canonical: nib.Nifti1Image, image: np.ndarray, mask: np.ndarray
         return image, "none"
     masked = np.where(mask, image, 0).astype(np.float32)
     if method == "fsl":
-        exe = shutil.which("fast")
+        exe = _fsl_fast()
         if not exe:
-            raise RuntimeError("--bias fsl: FSL 'fast' is not on the PATH")
+            raise RuntimeError("--bias fsl: FSL 'fast' is neither on the PATH nor in $FSLDIR/bin")
         workdir = workdir or tempfile.mkdtemp(prefix="mb_segment_")
         src = os.path.join(workdir, "brain.nii.gz")
         nib.save(nib.Nifti1Image(masked, canonical.affine), src)
