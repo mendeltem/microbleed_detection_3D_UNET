@@ -62,22 +62,28 @@ def load_canonical(path: str):
     return original, nib.as_closest_canonical(original)
 
 
-def _run(cmd, cwd=None):
-    proc = subprocess.run(cmd, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+def _run(cmd, cwd=None, env=None, timeout=1800):
+    try:
+        proc = subprocess.run(cmd, cwd=cwd, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        raise RuntimeError(f"{cmd[0]} did not finish within {timeout} s (FSL without FSLDIR hangs silently; see --bias)")
     if proc.returncode != 0:
         raise RuntimeError(f"{cmd[0]} failed (rc {proc.returncode}):\n{proc.stdout[-2000:]}")
     return proc.stdout
 
 
-def _fsl_fast() -> Optional[str]:
-    """FSL's ``fast``: on the PATH, or below $FSLDIR, or in the usual home install."""
+def _fsl_fast():
+    """FSL's ``fast`` and the FSLDIR to run it with: $FSLDIR, else the PATH, else the usual home install.
+    Returns ``(executable, fsldir)`` or ``(None, None)``. The wrapper scripts of recent FSL versions block without FSLDIR."""
+    roots = [os.environ.get("FSLDIR")]
     exe = shutil.which("fast")
     if exe:
-        return exe
-    for root in (os.environ.get("FSLDIR"), os.path.expanduser("~/fsl"), "/usr/local/fsl"):
+        roots.append(os.path.dirname(os.path.dirname(os.path.realpath(exe))))
+    roots += [os.path.expanduser("~/fsl"), "/usr/local/fsl", "/opt/fsl"]
+    for root in roots:
         if root and os.path.exists(os.path.join(root, "bin", "fast")):
-            return os.path.join(root, "bin", "fast")
-    return None
+            return os.path.join(root, "bin", "fast"), root
+    return None, None
 
 
 def brain_mask(canonical: nib.Nifti1Image, image: np.ndarray, mask_path: Optional[str] = None,
@@ -112,7 +118,7 @@ def bias_correct(canonical: nib.Nifti1Image, image: np.ndarray, mask: np.ndarray
                  workdir: Optional[str] = None) -> tuple[np.ndarray, str]:
     """``method``: auto | fsl | n4 | none. Returns ``(corrected image, method used)``."""
     if method == "auto":
-        if _fsl_fast():
+        if _fsl_fast()[0]:
             method = "fsl"
         else:
             try:
@@ -124,13 +130,15 @@ def bias_correct(canonical: nib.Nifti1Image, image: np.ndarray, mask: np.ndarray
         return image, "none"
     masked = np.where(mask, image, 0).astype(np.float32)
     if method == "fsl":
-        exe = _fsl_fast()
+        exe, fsldir = _fsl_fast()
         if not exe:
             raise RuntimeError("--bias fsl: FSL 'fast' is neither on the PATH nor in $FSLDIR/bin")
+        env = dict(os.environ, FSLDIR=fsldir, FSLOUTPUTTYPE=os.environ.get("FSLOUTPUTTYPE", "NIFTI_GZ"),
+                   PATH=os.path.join(fsldir, "bin") + os.pathsep + os.environ.get("PATH", ""))
         workdir = workdir or tempfile.mkdtemp(prefix="mb_segment_")
         src = os.path.join(workdir, "brain.nii.gz")
         nib.save(nib.Nifti1Image(masked, canonical.affine), src)
-        _run([exe, "-t", "2", "-n", "3", "-B", "--nopve", "-o", os.path.join(workdir, "fast"), src])
+        _run([exe, "-t", "2", "-n", "3", "-B", "--nopve", "-o", os.path.join(workdir, "fast"), src], env=env)
         restored = glob.glob(os.path.join(workdir, "fast_restore.nii*"))
         if not restored:
             raise RuntimeError(f"FSL fast wrote no *_restore image in {workdir}")
