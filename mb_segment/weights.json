@@ -1,0 +1,25 @@
+{
+  "release_url": "https://github.com/mendeltem/microbleed_detection_3D_UNET/releases/download/v0.1.0",
+  "models": {
+    "valdo_t2": {
+      "sequence": "T2*-GRE",
+      "trained_on": "VALDO 2021 Task 2, all 72 cases (236 microbleeds), three cohorts with 0.8-4 mm slices",
+      "licence": "CC BY-NC-SA 4.0 (derived from VALDO data)",
+      "members": [{"file": "valdo_t2_seed42.pt", "sha256": null}, {"file": "valdo_t2_seed1.pt", "sha256": null}]
+    },
+    "charite_t2": {
+      "sequence": "T2*-GRE (5 mm slices)",
+      "trained_on": "Charite in-house T2* cohort, all 75 cases (828 microbleeds)",
+      "licence": "see WEIGHTS-LICENSE.md",
+      "members": [{"file": "charite_t2_seed42.pt", "sha256": null}, {"file": "charite_t2_seed1.pt", "sha256": null}]
+    },
+    "charite_swi": {
+      "sequence": "SWI",
+      "trained_on": "Charite in-house SWI cohort, all 61 cases (652 microbleeds)",
+      "licence": "see WEIGHTS-LICENSE.md",
+      "members": [{"file": "charite_swi_seed42.pt", "sha256": null}, {"file": "charite_swi_seed1.pt", "sha256": null}]
+    }
+  },
+  "classifier": {"file": "classifier.pt", "sha256": null,
+                 "trained_on": "pooled out-of-fold candidates of VALDO and both Charite cohorts"}
+}
