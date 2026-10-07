@@ -30,14 +30,17 @@ touches it; every other component is a false alarm), pooled over cases, from the
 numbers come from the five-fold models that preceded the released full-data models; the cross tests were run with the
 released models themselves.
 
-| Model | own data, 5-fold cross-validation | cross test with the released model |
+| Model | own data, 5-fold cross-validation (research fold models) | cross test with the released model, CLI default (stage 2) |
 |---|---|---|
-| `valdo_t2` | 0.647 (57 cases); 15 held-out VALDO cases measured once: 0.468 pooled, median per case 0.667; external public SWI cohort (Momeni), no adaptation: 0.613-0.630 | on the Charite T2* / SWI cohorts: see `docs/CROSS-TESTS.md` |
-| `charite_t2` | 0.671 (75 cases, with the classifier) | on VALDO (72 cases): see `docs/CROSS-TESTS.md` |
-| `charite_swi` | 0.672 (61 cases, with the classifier) | on VALDO (72 cases): see `docs/CROSS-TESTS.md` |
+| `valdo_t2` | 0.647 (57 cases); 15 held-out VALDO cases measured once: 0.468 pooled, median per case 0.667; external public SWI cohort (Momeni), no adaptation: 0.613-0.630 | Charite T2* (75 cases): **0.604** (P 0.50, S 0.77); Charite SWI (other sequence): 0.434 |
+| `charite_t2` | 0.671 (75 cases, with the classifier) | VALDO (72 cases): 0.506 (P 0.77, S 0.38) |
+| `charite_swi` | 0.672 (61 cases, with the classifier) | VALDO (72 cases, other sequence): 0.354 |
 
 The released models were trained on all cases, so they cannot be scored on their own data without optimism. Use the model that
-matches your sequence; a T2* model on SWI (and the reverse) was measured and is clearly worse (`docs/CROSS-TESTS.md`).
+matches your sequence; a T2* model on SWI (and the reverse) was measured and is clearly worse. One caveat measured in the cross tests:
+the released full-data models give higher probabilities than the research fold models, so `--stage1-only` at the default threshold 0.3
+over-detects on another scanner (0.415 against 0.629 cross-selected); the default stage 2 absorbs most of this, and `--threshold 0.6` is
+the measured setting for stage 1 there. All numbers and the reasoning: `docs/CROSS-TESTS.md`.
 
 ## What the command does
 
